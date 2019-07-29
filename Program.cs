@@ -10,7 +10,7 @@ namespace LockedModules
             var LockedModuleAudit = new LockedModulesAudit();
             var msg =LockedModuleAudit.ExecuteAudit("51754");
             foreach(var auditmessage in msg)
-                System.Console.WriteLine("  Audit Message: "+auditmessage.Message +"\n  Audit Status: "+ auditmessage.Status);
+                System.Console.WriteLine("***********\nAudit Message: "+auditmessage.Message +"\nAudit Status: "+ auditmessage.Status);
         }
     }
 }

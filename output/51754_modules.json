@@ -1,0 +1,111 @@
+[{
+    "id": 497485,
+    "name": "Week 04: Function and Structure of the Value Chain",
+    "position": 6,
+    "unlock_at": "2019-05-04T06:00:00Z",
+    "require_sequential_progress": false,
+    "publish_final_grade": false,
+    "prerequisite_module_ids": [],
+    "published": true,
+    "items_count": 10,
+    "items_url": "https://byui.instructure.com/api/v1/courses/51754/modules/497485/items"
+}, {
+    "id": 497467,
+    "name": "Instructor Resources (Do NOT Publish)",
+    "position": 1,
+    "unlock_at": null,
+    "require_sequential_progress": false,
+    "publish_final_grade": false,
+    "prerequisite_module_ids": [72],
+    "published": false,
+    "items_count": 10,
+    "items_url": "https://byui.instructure.com/api/v1/courses/51754/modules/497467/items"
+}, {
+    "id": 497471,
+    "name": "Textbook Information",
+    "position": 2,
+    "unlock_at": null,
+    "require_sequential_progress": false,
+    "publish_final_grade": false,
+    "prerequisite_module_ids": [],
+    "published": true,
+    "items_count": 1,
+    "items_url": "https://byui.instructure.com/api/v1/courses/51754/modules/497471/items"
+}, {
+    "id": 497473,
+    "name": "Week 01: Introduction",
+    "position": 3,
+    "unlock_at": null,
+    "require_sequential_progress": true,
+    "publish_final_grade": false,
+    "prerequisite_module_ids": [],
+    "published": true,
+    "items_count": 5,
+    "items_url": "https://byui.instructure.com/api/v1/courses/51754/modules/497473/items"
+}, {
+    "id": 497477,
+    "name": "Week 02: Introduction to the Value Chain",
+    "position": 4,
+    "unlock_at": null,
+    "require_sequential_progress": false,
+    "publish_final_grade": false,
+    "prerequisite_module_ids": [123456789, 95892, 497467, 497471, 497473, 497481],
+    "published": true,
+    "items_count": 10,
+    "items_url": "https://byui.instructure.com/api/v1/courses/51754/modules/497477/items"
+}, {
+    "id": 497481,
+    "name": "Week 03: The Competitive Environment",
+    "position": 5,
+    "unlock_at": "2019-04-27T06:00:00Z",
+    "require_sequential_progress": false,
+    "publish_final_grade": false,
+    "prerequisite_module_ids": [75],
+    "published": true,
+    "items_count": 10,
+    "items_url": "https://byui.instructure.com/api/v1/courses/51754/modules/497481/items"
+}, {
+    "id": 497489,
+    "name": "Week 05: Price Determination",
+    "position": 7,
+    "unlock_at": "2019-05-11T06:00:00Z",
+    "require_sequential_progress": false,
+    "publish_final_grade": false,
+    "prerequisite_module_ids": [],
+    "published": true,
+    "items_count": 11,
+    "items_url": "https://byui.instructure.com/api/v1/courses/51754/modules/497489/items"
+}, {
+    "id": 497491,
+    "name": "Week 06: Marketing in Developing Economies",
+    "position": 8,
+    "unlock_at": "2019-05-18T06:00:00Z",
+    "require_sequential_progress": false,
+    "publish_final_grade": false,
+    "prerequisite_module_ids": [],
+    "published": true,
+    "items_count": 10,
+    "items_url": "https://byui.instructure.com/api/v1/courses/51754/modules/497491/items"
+}, {
+    "id": 497493,
+    "name": "Week 07: Technical Sales",
+    "position": 9,
+    "unlock_at": "2019-05-25T06:00:00Z",
+    "require_sequential_progress": false,
+    "publish_final_grade": false,
+    "prerequisite_module_ids": [],
+    "published": true,
+    "items_count": 8,
+    "items_url": "https://byui.instructure.com/api/v1/courses/51754/modules/497493/items"
+}, {
+    "id": 497495,
+    "name": "Week 08: Cooperative Marketing I",
+    "position": 10,
+    "unlock_at": "2019-06-01T06:00:00Z",
+    "require_sequential_progress": false,
+    "publish_final_grade": false,
+    "prerequisite_module_ids": [],
+    "published": true,
+    "items_count": 10,
+    "items_url": "https://byui.instructure.com/api/v1/courses/51754/modules/497495/items"
+}]

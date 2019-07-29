@@ -1,0 +1,11 @@
+C:\Users\eljulander\Documents\AuditTemplates\LockedModules\bin\Debug\netcoreapp2.2\LockedModules.deps.json
+C:\Users\eljulander\Documents\AuditTemplates\LockedModules\bin\Debug\netcoreapp2.2\LockedModules.runtimeconfig.json
+C:\Users\eljulander\Documents\AuditTemplates\LockedModules\bin\Debug\netcoreapp2.2\LockedModules.runtimeconfig.dev.json
+C:\Users\eljulander\Documents\AuditTemplates\LockedModules\bin\Debug\netcoreapp2.2\LockedModules.dll
+C:\Users\eljulander\Documents\AuditTemplates\LockedModules\bin\Debug\netcoreapp2.2\LockedModules.pdb
+C:\Users\eljulander\Documents\AuditTemplates\LockedModules\obj\Debug\netcoreapp2.2\LockedModules.csprojAssemblyReference.cache
+C:\Users\eljulander\Documents\AuditTemplates\LockedModules\obj\Debug\netcoreapp2.2\LockedModules.csproj.CoreCompileInputs.cache
+C:\Users\eljulander\Documents\AuditTemplates\LockedModules\obj\Debug\netcoreapp2.2\LockedModules.AssemblyInfoInputs.cache
+C:\Users\eljulander\Documents\AuditTemplates\LockedModules\obj\Debug\netcoreapp2.2\LockedModules.AssemblyInfo.cs
+C:\Users\eljulander\Documents\AuditTemplates\LockedModules\obj\Debug\netcoreapp2.2\LockedModules.dll
+C:\Users\eljulander\Documents\AuditTemplates\LockedModules\obj\Debug\netcoreapp2.2\LockedModules.pdb

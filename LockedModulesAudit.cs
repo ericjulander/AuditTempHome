@@ -20,6 +20,7 @@ namespace LockedModulesAuditor
     public class LockedModulesAudit
     {
 
+
         private List<CanvasModule> GetModuleFromId(string id)
         {
             return JsonConvert.DeserializeObject<List<CanvasModule>>(System.IO.File.ReadAllText($"./output/{id}_modules.json"));
@@ -41,15 +42,14 @@ namespace LockedModulesAuditor
         }
 
         private delegate List<AuditMessage> AuditExecutor(List<AuditMessage> AuditMessages);
-        private delegate AuditExecutor AuditFunction(List<CanvasModule> CourseCopy, List<CanvasModule> CourseBlueprint, string ID);
+        private delegate AuditExecutor AuditFunction(Dictionary<string, CanvasModule> CourseCopy, Dictionary<string, CanvasModule> CourseBlueprint, string ID);
         private List<AuditMessage> RunSubAudits(string courseId, List<AuditFunction> SubAudits)
         {
             List<AuditMessage> auditMessages = new List<AuditMessage>();
             try
             {
-
-                var CourseCopyModules = GetModuleFromId(courseId);
-                var BlueprintModules = GetBluePrintCourse(courseId);
+                var CourseCopyModules = ConvertListToDictionary(GetModuleFromId(courseId).OrderBy(module => module.Name).ToList());
+                var BlueprintModules = ConvertListToDictionary(GetBluePrintCourse(courseId).OrderBy(module => module.Name).ToList());
                 do
                 {
                     try
@@ -81,6 +81,19 @@ namespace LockedModulesAuditor
             };
         }
 
+        private void AlignListContent(ref List<CanvasModule> modules)
+        {
+            modules.OrderBy(module => module.Name);
+        }
+        private Dictionary<string, CanvasModule> ConvertListToDictionary(List<CanvasModule> courseList)
+        {
+            return new Dictionary<string, CanvasModule>(
+                courseList.OrderBy(module => module.Name).Select(module =>
+                {
+                    return new KeyValuePair<string, CanvasModule>(module.Id.ToString(), module);
+                }
+            ));
+        }
         private AuditExecutor PipeMessages(List<AuditMessage> AuditMessages)
         {
             return (OtherMessages) =>
@@ -90,102 +103,110 @@ namespace LockedModulesAuditor
                 return OtherMessages;
             };
         }
-
-        private CanvasModule GetModuleFromId(string ID, List<CanvasModule> Modules)
-        {
-            var ModList = Modules.Where(module => module.Id.ToString() == ID);
-            CanvasModule Mod = null;
-            if (ModList.Count() > 0)
-                Mod = ModList.ToList()[0];
-            return Mod;
-        }
-
-        private string[] GetMissingPreReqs(CanvasModule copy, CanvasModule blueprint, List<CanvasModule> CourseCopy, List<CanvasModule> BlueprintCourse)
+        private string[] CheckPrereqsFromArray(long[] prototype, long[] test, Dictionary<string, CanvasModule> PrototypeModules, Dictionary<string, CanvasModule> testModules)
         {
             List<string> missingModules = new List<string>();
-            foreach (var moduleId in blueprint.PrerequisiteModuleIds)
+            foreach (var prototypeId in prototype)
             {
-                if (!Array.Exists(copy.PrerequisiteModuleIds, copyModuleID =>
+                // goes through every id from the prototype and looks for its match in the test array
+                if (!Array.Exists(test, testId =>
+                    {
+                        //because the module IDs will vary by course, we need to look them up by their actual name.
+
+                        CanvasModule testModule = null;
+                        if (testModules.ContainsKey(testId.ToString()))
+                            testModule = testModules[testId.ToString()];
+                        else
+                            // we couldn't find the module in the test course
+                            return false;
+
+                        CanvasModule prototypeModule = null;
+                        if (PrototypeModules.ContainsKey(prototypeId.ToString()))
+                            prototypeModule = PrototypeModules[prototypeId.ToString()];
+                        else
+                            // We couldn't find the module in the prototype course
+                            return false;
+
+                        // now that we found each respective module in the courses, we need to make sure they lineup
+                        return prototypeModule.Name.Equals(testModule.Name);
+                    }))
                 {
-                    var CopyPreReqModule = GetModuleFromId(copyModuleID.ToString(), CourseCopy);
-                    if (CopyPreReqModule == null)
-                        return false;
-                    var BlueprintPreReqModule = GetModuleFromId(moduleId.ToString(), BlueprintCourse);
-                    if (BlueprintPreReqModule == null)
-                        return false;
-                    return BlueprintPreReqModule.Name.Equals(CopyPreReqModule.Name);
-                })) 
-                missingModules.Add(moduleId.ToString());
+                    // if we cant find matching modules
+                    missingModules.Add(prototypeId.ToString());
+                }
+
+
             }
             return missingModules.ToArray();
         }
-        private string[] GetExtraPreReqs(CanvasModule copy, CanvasModule blueprint, List<CanvasModule> CourseCopy, List<CanvasModule> BlueprintCourse)
-        {
-            List<string> extraModules = new List<string>();
-            foreach (var moduleId in copy.PrerequisiteModuleIds)
-            {
-                if (!Array.Exists(blueprint.PrerequisiteModuleIds, blueprintCopyId =>
-                {
-                    var CopyPreReqModule = GetModuleFromId(moduleId.ToString(), CourseCopy);
-                    if (CopyPreReqModule == null)
-                        return false;
-                    var BlueprintPreReqModule = GetModuleFromId(blueprintCopyId.ToString(), BlueprintCourse);
-                    if (BlueprintPreReqModule == null)
-                        return false;
-                    return CopyPreReqModule.Name.Equals(BlueprintPreReqModule.Name);
-                }))
-                extraModules.Add(moduleId.ToString());
-            }
-            return extraModules.ToArray();
-        }
-        private AuditExecutor ModulePrereqsMatch(List<CanvasModule> CourseCopy, List<CanvasModule> BlueprintCourse, string ID)
+
+        private AuditExecutor ModulePrereqsMatch(Dictionary<string, CanvasModule> CourseCopy, Dictionary<string, CanvasModule> BlueprintCourse, string ID)
         {
             var AuditMessages = new List<AuditMessage>();
-            if (CourseCopy.Count == BlueprintCourse.Count)
+            var successful = true;
+            for (var i = 0; i < BlueprintCourse.Count; i++)
             {
-                var CopyModules = CourseCopy.OrderBy(module => module.Name).ToList();
-                var BlueprintModules = BlueprintCourse.OrderBy(module => module.Name).ToList();
-                bool passed = true;
-                for (var i = 0; i < CopyModules.Count; i++)
+                var prototype = BlueprintCourse[BlueprintCourse.Keys.ElementAt(i)];
+                var test = CourseCopy[CourseCopy.Keys.ElementAt(i)];
+
+                var missingPrereqs = CheckPrereqsFromArray(prototype.PrerequisiteModuleIds, test.PrerequisiteModuleIds, BlueprintCourse, CourseCopy);
+                var extraPrereqs = CheckPrereqsFromArray(test.PrerequisiteModuleIds, prototype.PrerequisiteModuleIds, CourseCopy, BlueprintCourse);
+                var failed = !(missingPrereqs.Length <= 0 && extraPrereqs.Length <= 0);
+                if (failed)
                 {
-                    var missingPrereqs = GetMissingPreReqs(CopyModules[i], BlueprintModules[i], CopyModules, BlueprintModules);
+                    successful = false;
+                    var message = "";
+                    List<string> warningIds = new List<string>();
                     if (missingPrereqs.Length > 0)
                     {
-                        passed = false;
-                        var missing = "";
-                        foreach (var prereq in missingPrereqs)
+                        message += $"The Module \"{test.Name}\" is missing the following prerequsites:\n";
+                        foreach (string id in missingPrereqs)
                         {
-                            var Mod = GetModuleFromId(prereq, BlueprintModules);
-                            if (Mod == null)
-                                AuditMessages.Add(GenerateMessage(ID, $"The following module ID was added as a prerequsite, but this module could not be found in the course!\n     Module ID: {prereq}", AuditStatus.Warn));
-                            missing += $"     {prereq}{(Mod != null ? " - " + Mod.Name : "")}\n";
+                            if (CourseCopy.ContainsKey(id))
+                            {
+                                message += (id + " - " + CourseCopy[id].Name);
+                            }
+                            else
+                            {
+                                message += id;
+                                warningIds.Add(id);
+                            }
+                            message += "\n";
                         }
-                        AuditMessages.Add(GenerateMessage(ID, $"The module \"{CopyModules[i].Name}\" is missing the following prerequsites:\n{missing}", AuditStatus.Fail));
                     }
-                    var extraPrereqs = GetExtraPreReqs(CopyModules[i], BlueprintModules[i], CopyModules, BlueprintModules);
+                    // Add the messages for the extra prereqs
                     if (extraPrereqs.Length > 0)
                     {
-                        passed = false;
-                        var extra = "";
-                        foreach (var prereq in extraPrereqs)
+                        message += $"The Module \"{test.Name}\" hs the following prerequsites which are not in the associated blueprint module:\n";
+                        foreach (string id in extraPrereqs)
                         {
-                            var Mod = GetModuleFromId(prereq, CopyModules);
-                            if (Mod == null)
-                                AuditMessages.Add(GenerateMessage(ID, $"The following module ID was added as a prerequsite, but this module could not be found in the course!\n     Module ID: {prereq}", AuditStatus.Warn));
-                            extra += $"     {prereq}{(Mod != null ? " - " + Mod.Name : "")}\n";
+                            if (CourseCopy.ContainsKey(id))
+                            {
+                                message += (id + " - " + CourseCopy[id].Name);
+                            }
+                            else
+                            {
+                                message += id;
+                                warningIds.Add(id);
+                            }
+                            message += "\n";
                         }
-                        AuditMessages.Add(GenerateMessage(ID, $"The module \"{CopyModules[i].Name}\" has the following prerequsites which are not in the associated blueprint module:\n{extra}", AuditStatus.Fail));
+                    }
+                    AuditMessages.Add(GenerateMessage(ID, message, AuditStatus.Fail));
+                    if (warningIds.Count > 0)
+                    {
+                        var warningMessage = $"The following module id{(warningIds.Count > 1 ? "'s have" : " has")} been added to this module as a prerequsite, but {(warningIds.Count > 1 ? "they" : "it")} could not be found in the course:\n";
+                        foreach (var warning in warningIds)
+                            warningMessage += warning + "\n";
+                        AuditMessages.Add(GenerateMessage(ID, warningMessage, AuditStatus.Warn));
                     }
                 }
-                if (passed)
-                    AuditMessages.Add(GenerateMessage(ID, $"All prerequsites for the modules match", AuditStatus.Pass));
 
             }
-            else
+            if (successful)
             {
-                AuditMessages.Add(GenerateMessage(ID, "These two courses don't have the same number of modules. A comparison cannot be made.", AuditStatus.Fail));
+                AuditMessages.Add(GenerateMessage(ID, "All of the prerequsites of the modules match those in the blueprint", AuditStatus.Pass));
             }
-
             return PipeMessages(AuditMessages);
         }
 
@@ -199,35 +220,30 @@ namespace LockedModulesAuditor
             }
             return false;
         }
-        private AuditExecutor ModuleLockDatesMatch(List<CanvasModule> CourseCopy, List<CanvasModule> BlueprintCourse, string ID)
+        private AuditExecutor ModuleLockDatesMatch(Dictionary<string, CanvasModule> CourseCopy, Dictionary<string, CanvasModule> BlueprintCourse, string ID)
         {
             var AuditMessages = new List<AuditMessage>();
-            if (CourseCopy.Count == BlueprintCourse.Count)
+            var successful = true;
+            for (var i = 0; i < BlueprintCourse.Count; i++)
             {
-                var CopyModules = CourseCopy.OrderBy(module => module.Name).ToList();
-                var BlueprintModules = BlueprintCourse.OrderBy(module => module.Name).ToList();
-                bool passed = true;
-                for (var i = 0; i < CopyModules.Count; i++)
+                var blueprintModule = BlueprintCourse[BlueprintCourse.Keys.ElementAt(i)];
+                var copyModule = CourseCopy[CourseCopy.Keys.ElementAt(i)];
+
+                if (!LockDatesMatch(copyModule, blueprintModule))
                 {
-                    if (!LockDatesMatch(CopyModules[i], BlueprintModules[i]))
-                    {
-                        passed = false;
-                        AuditMessages.Add(GenerateMessage(ID, $"The module \"{CopyModules[i].Name}\" has an unmatching unlock date!", AuditStatus.Fail));
-                    }
+                    successful = false;
+                    AuditMessages.Add(GenerateMessage(ID, $"The \"{copyModule.Name}\" module has a lockdate which does not match that of the couse blueprint.", AuditStatus.Fail));
                 }
-                if (passed)
-                    AuditMessages.Add(GenerateMessage(ID, $"All unlock dates for the modules match.", AuditStatus.Pass));
 
             }
-            else
+            if (successful)
             {
-                AuditMessages.Add(GenerateMessage(ID, "These two courses don't have the same number of modules. A comparison cannot be made.", AuditStatus.Fail));
+                AuditMessages.Add(GenerateMessage(ID, "All of the modules lock dates match those in the blueprint", AuditStatus.Pass));
             }
-
             return PipeMessages(AuditMessages);
         }
 
-        private AuditExecutor Template(List<CanvasModule> CourseCopy, List<CanvasModule> BlueprintCourse, string ID)
+        private AuditExecutor Template(Dictionary<string, CanvasModule> CourseCopy, Dictionary<string, CanvasModule> BlueprintCourse, string ID)
         {
             var AuditMessages = new List<AuditMessage>();
             return PipeMessages(AuditMessages);
@@ -237,70 +253,60 @@ namespace LockedModulesAuditor
         {
             return Copy.RequireSequentialProgress == BlueprintCourse.RequireSequentialProgress;
         }
-        private AuditExecutor ModuleSequentialProgressConfigurationsMatch(List<CanvasModule> CourseCopy, List<CanvasModule> BlueprintCourse, string ID)
+        private AuditExecutor ModuleSequentialProgressConfigurationsMatch(Dictionary<string, CanvasModule> CourseCopy, Dictionary<string, CanvasModule> BlueprintCourse, string ID)
         {
             var AuditMessages = new List<AuditMessage>();
-            if (CourseCopy.Count == BlueprintCourse.Count)
+            var successful = true;
+            for (var i = 0; i < BlueprintCourse.Count; i++)
             {
-                var CopyModules = CourseCopy.OrderBy(module => module.Name).ToList();
-                var BlueprintModules = BlueprintCourse.OrderBy(module => module.Name).ToList();
-                bool passed = true;
-                for (var i = 0; i < CopyModules.Count; i++)
+                var blueprintModule = BlueprintCourse[BlueprintCourse.Keys.ElementAt(i)];
+                var copyModule = CourseCopy[CourseCopy.Keys.ElementAt(i)];
+
+                if (!SequentialProgressConfigurationsMatch(copyModule, blueprintModule))
                 {
-                    if (!SequentialProgressConfigurationsMatch(CopyModules[i], BlueprintModules[i]))
-                    {
-                        passed = false;
-                        var requiresSequentialProgressMessage = BlueprintModules[i].RequireSequentialProgress ? "requires" : "does not require";
-                        AuditMessages.Add(GenerateMessage(ID, $"The module \"{CopyModules[i].Name}\" does not match the same confifuration as the blueprint!\n This module {requiresSequentialProgressMessage} sequential progress.", AuditStatus.Fail));
-                    }
+                    successful = false;
+                    var sequentialProgressRequired = copyModule.RequireSequentialProgress;
+                    var required = (sequentialProgressRequired) ? "required" : "not required";
+                    var blueprintStatus = (sequentialProgressRequired) ? "does not require" : "does require";
+                    AuditMessages.Add(GenerateMessage(ID, $"The \"{copyModule.Name}\" module marks sequential progress as {required} while the course blue print has sequential progress marked as {blueprintStatus} for this module.", AuditStatus.Fail));
                 }
-                if (passed)
-                    AuditMessages.Add(GenerateMessage(ID, $"All modules have the same sequential progress configurations.", AuditStatus.Pass));
 
             }
-            else
+            if (successful)
             {
-                AuditMessages.Add(GenerateMessage(ID, "These two courses don't have the same number of modules. A comparison cannot be made.", AuditStatus.Fail));
+                AuditMessages.Add(GenerateMessage(ID, "All of the modules lock dates match those in the blueprint", AuditStatus.Pass));
             }
-
             return PipeMessages(AuditMessages);
         }
 
         private bool StatesMatch(CanvasModule Copy, CanvasModule BlueprintCourse)
         {
-            if(Copy.State == null && BlueprintCourse.State == null)
+            if (Copy.State == null && BlueprintCourse.State == null)
                 return true;
-            else if(Copy.State == null || BlueprintCourse.State == null)
+            else if (Copy.State == null || BlueprintCourse.State == null)
                 return false;
             return Copy.State.Equals(BlueprintCourse.State);
         }
-        private AuditExecutor ModuleStatesMatch(List<CanvasModule> CourseCopy, List<CanvasModule> BlueprintCourse, string ID)
+        private AuditExecutor ModuleStatesMatch(Dictionary<string, CanvasModule> CourseCopy, Dictionary<string, CanvasModule> BlueprintCourse, string ID)
         {
-            var AuditMessages = new List<AuditMessage>();
-            if (CourseCopy.Count == BlueprintCourse.Count)
+             var AuditMessages = new List<AuditMessage>();
+            var successful = true;
+            for (var i = 0; i < BlueprintCourse.Count; i++)
             {
-                var CopyModules = CourseCopy.OrderBy(module => module.Name).ToList();
-                var BlueprintModules = BlueprintCourse.OrderBy(module => module.Name).ToList();
-                bool passed = true;
-                for (var interval = 0; interval < CopyModules.Count; interval++)
+                var blueprintModule = BlueprintCourse[BlueprintCourse.Keys.ElementAt(i)];
+                var copyModule = CourseCopy[CourseCopy.Keys.ElementAt(i)];
+
+                if (!StatesMatch(copyModule, blueprintModule))
                 {
-                    if (!StatesMatch(CopyModules[interval], BlueprintModules[interval]))
-                    {
-                        passed = false;
-                        var requiresSequentialProgressMessage = BlueprintModules[interval].RequireSequentialProgress ? "requires" : "does not require";
-                        AuditMessages.Add(GenerateMessage(ID, $"The module state of \"{CopyModules[interval].Name}\" does not match the same confifuration as the blueprint!\n This module state should be \"{BlueprintModules[interval].State}\" not \"{CopyModules[interval].State}\".", AuditStatus.Fail));
-                    }
-                    
+                    successful = false;
+                    AuditMessages.Add(GenerateMessage(ID, $"The \"{copyModule.Name}\" module marks the state as {copyModule.State} while the course blue print has the state marked as {blueprintModule.State} for this module.", AuditStatus.Fail));
                 }
-                if (passed)
-                    AuditMessages.Add(GenerateMessage(ID, $"All modules have matching states", AuditStatus.Pass));
 
             }
-            else
+            if (successful)
             {
-                AuditMessages.Add(GenerateMessage(ID, "These two courses don't have the same number of modules. A comparison cannot be made.", AuditStatus.Fail));
+                AuditMessages.Add(GenerateMessage(ID, "All of the modules lock states match those in the blueprint", AuditStatus.Pass));
             }
-
             return PipeMessages(AuditMessages);
         }
 

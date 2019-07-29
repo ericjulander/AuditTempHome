@@ -1,0 +1,42 @@
+using Newtonsoft.Json;
+using System.Net.Http;
+
+internal override List<AuditMessage> ExecuteAudit(string courseCode)
+        {
+            var messages = new List<AuditMessage>();
+            string description = GetRequest(courseCode);
+            /* SET STATUS MESSAGE AND URL HERE */
+            messages.Add(new AuditMessage
+                {
+                    Status = AuditStatus.Pass,
+                    Message = description,
+                    Url = $"https://byui.instructure.com/courses/{courseCode}"
+                });
+            return messages;
+        }
+
+private string GetRequest(string courseCode)
+        {
+            string description; // your return value
+            using (HttpClient client = new HttpClient()) // this would be replaced with the wrapper or HttpClientFactory
+            {
+                // add API Token to header
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", System.Environment.GetEnvironmentVariable("CANVAS_API_TOKEN"));
+                try
+                {
+                    // make your get request. This returns a JSON string
+                    string responseBody = client.GetStringAsync($"https://byui.instructure.com/api/v1/courses/{courseCode}?include[]=public_description").Result;
+                    // deserialize the entire response body
+                    dynamic courseData = JsonConvert.DeserializeObject(responseBody);
+                    // get out the key you need and convert to string, bool, etc.
+                    description = courseData.GetValue("public_description").ToString();
+                    // System.Console.WriteLine(description);
+                }
+                catch (Exception error)
+                {
+                    // do NOT throw. Just set your return value to an error of some kind that you can test later.
+                    description = $"ERROR: {error.Message}";
+                }
+            }
+            return description;
+        }
